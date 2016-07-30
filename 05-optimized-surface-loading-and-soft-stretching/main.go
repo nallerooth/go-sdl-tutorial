@@ -41,13 +41,21 @@ func initWindowAndSurface(title string, w, h int) (*sdl.Window, *sdl.Surface, er
 	return window, surface, nil
 }
 
-func loadBmpFile(path string) *sdl.Surface {
+func loadBmpFile(path string, format *sdl.PixelFormat) *sdl.Surface {
+	// Load 24-bit bitmap
 	s, err := sdl.LoadBMP(path)
 	if err != nil {
 		panic(err)
 	}
 
-	return s
+	// Convert bitmap to 32-bit
+	o, err := s.Convert(format, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	s.Free()
+	return o
 }
 
 func main() {
@@ -64,17 +72,13 @@ func main() {
 	windowSurface.FillRect(&clearRect, 0x00000000)
 
 	surfaces := []*sdl.Surface{
-		loadBmpFile("./press.bmp"),
-		loadBmpFile("./up.bmp"),
-		loadBmpFile("./down.bmp"),
-		loadBmpFile("./left.bmp"),
-		loadBmpFile("./right.bmp")}
+		loadBmpFile("./stretch.bmp", windowSurface.Format)}
 
 	// Rect where image should be shown
-	imgRect := sdl.Rect{80, 60, 640, 480}
+	imgRect := sdl.Rect{0, 0, W_WIDTH, W_HEIGHT}
 
 	currentSurface = surfaces[0]
-	currentSurface.Blit(&currentSurface.ClipRect, windowSurface, &imgRect)
+	currentSurface.BlitScaled(&currentSurface.ClipRect, windowSurface, &imgRect)
 
 	window.UpdateSurface()
 
@@ -84,33 +88,14 @@ func main() {
 
 	for running {
 		for event = sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch t := event.(type) {
+			switch event.(type) {
 
 			// Special events
 			case *sdl.QuitEvent:
 				running = false
 				fmt.Println("Quit")
-
-			// Keyboard events
-			case *sdl.KeyDownEvent:
-				switch t.Keysym.Sym {
-				case sdl.K_UP:
-					currentSurface = surfaces[KEY_PRESS_SURFACE_UP]
-				case sdl.K_DOWN:
-					currentSurface = surfaces[KEY_PRESS_SURFACE_DOWN]
-				case sdl.K_LEFT:
-					currentSurface = surfaces[KEY_PRESS_SURFACE_LEFT]
-				case sdl.K_RIGHT:
-					currentSurface = surfaces[KEY_PRESS_SURFACE_RIGHT]
-				default:
-					currentSurface = surfaces[KEY_PRESS_SURFACE_DEFAULT]
-				}
 			}
 		}
-
-		// Set updated surface and update windowSurface
-		currentSurface.Blit(&currentSurface.ClipRect, windowSurface, &imgRect)
-		window.UpdateSurface()
 	}
 
 	// Main loop end
